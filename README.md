@@ -10,7 +10,17 @@ This is the official github page for the [paper](https://dl.acm.org/doi/10.1145/
 
 ## Environment Setup
 
-TODO
+### Create environment for training/evaluation
+
+`conda env create -f environment_main.yml`
+
+### Install transnetv2, clip [For feature extraction]
+
+### Additionally setup environment for diarization and feature extraction
+
+`conda env create -f environment_diarization.yml`
+
+`python -m spacy download de_core_news_lg`
 
 ## Dataset
 
@@ -49,9 +59,4 @@ TODO
 
 
 ## To-Dos
-- [x] Features and splits from the paper
-- [x] Raw videos to be shared via private link
-- [ ] Feature extraction code
-- [ ] Training and Evaluation code
 - [ ] Comparison methods code
-- [ ] Analysis plots
