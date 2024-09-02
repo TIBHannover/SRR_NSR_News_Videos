@@ -1,0 +1,128 @@
+{
+    "news roles": {
+        "anchor": [
+            "a news anchor",
+            "a news anchor in the foreground with a screen in the background",
+            "a news anchor in the foreground with an image in the background",
+            "a person on television presenting news",
+            "a news presenter",
+            "an anchorwoman",
+            "an anchorman",
+            "an anchor in front of a screen",
+            "an anchor behind a desk",
+            "an anchor behind a desk and in front of a screen",
+            "a person with notes"
+        ],
+        "reporter": [
+            "a journalist reporting from outdoors",
+            "a journalist in the foreground reporting from outdoors",
+            "a journalist reporting from outside the news studio",
+            "a journalist reporting from outside the news studio with a microphone in their hand"
+        ],
+        "police-frwr": [
+            "police",
+            "a police officer",
+            "a police department",
+            "a firefighter",
+            "a fire department"
+        ],
+        "doctor-nurse": [
+            "a doctor",
+            "a nurse"
+        ],
+        "layperson-x-covid": [
+            "a protestor demonstrating against covid or vaccine measures"
+        ],
+        "layperson-4-covid": [
+            "a protestor demonstrating for covid or vaccine measures"
+        ],
+        "layperson": [
+            "a layperson",
+            "a layperson being interviewed"
+        ],
+        "expert-medicine": [
+            "a medical expert",
+            "a medical expert being interviewed"
+        ],
+        "expert-other": [
+            "a expert in a specific field being interviewed",
+            "a mathematician being interviewed",
+            "a lawyer being interviewed",
+            "a professor being interviewed"
+        ],
+        "politician": [
+            "a politician",
+            "a person who is part of a political party",
+            "a person with political power"
+        ],
+        "politician-ampel": [
+            "a politician of the german SPD party",
+            "a politician of the german Gruene party",
+            "a politician of the german FDP party"
+        ],
+        "politician-right": [
+            "a politician of a german right wing party",
+            "a politician of the german AfD party",
+            "a politician of the german NPD party",
+            "a politician of the german Pro Chemnitz party"
+        ],
+        "politician-other": [
+            "a politician of the german CDU party",
+            "a politician of the german Linke party"
+        ],
+        "politician-n-de": [
+            "a politician not from germany",
+            "a non-german politician",
+            "a politician representing an international organistation"
+        ],
+        "celeb": [
+            "a celebrity"
+        ]
+    },
+    "news situations": {
+        "talking-head": [
+            "an anchor reporting news in the news studio",
+            "a reporter reporting from the scene",
+            "a journalist reporting",
+            "a journalist reporting from the scene",
+            "a journalist reporting outside the news studio"
+        ],
+        "interview": [
+            "an interview",
+            "a news interview",
+            "a person interviewing",
+            "a person being interviewed",
+            "a person being interviewed online",
+            "a person being interviewed in a news studio",
+            "a journalist conducting an interview"
+        ],
+        "speech": [
+            "a public speech",
+            "a speech during a press conference"
+        ],
+        "commenting": [
+            "a news anchor commenting on a certain topic",
+            "a person commenting on a certain topic"
+        ],
+        "voiceover": [
+            "a screen being shown while a news reporter talks over it",
+            "statistics"
+        ]
+    },
+    "places": {
+        "studio": [
+            "a news studio",
+            "a television studio"
+        ],
+        "indoor": [
+            "an indoor place",
+            "a room"
+        ],
+        "outdoor": [
+            "an outdoor place",
+            "an outside space",
+            "a street",
+            "many people outside"
+        ]
+    }
+}
