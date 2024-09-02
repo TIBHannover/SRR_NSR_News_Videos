@@ -10,17 +10,26 @@ This is the official github page for the [paper](https://dl.acm.org/doi/10.1145/
 
 ## Environment Setup
 
-### Create environment for training/evaluation
+- Create environment for training/evaluation
 
-`conda env create -f environment_main.yml`
+  `conda env create -f environment_main.yml`
 
-### Install transnetv2, clip [For feature extraction]
+- Install transnetv2, clip and download spacy model [For feature extraction]
 
-### Additionally setup environment for diarization and feature extraction
+  - Clone [TransNetV2](https://github.com/soCzech/TransNetV2)
+      ```
+      cd TransNetV2
+      python setup.py install
+      ```
 
-`conda env create -f environment_diarization.yml`
+  - `pip install git+https://github.com/openai/CLIP.git`
 
-`python -m spacy download de_core_news_lg`
+  - `python -m spacy download de_core_news_lg`
+
+-  Additionally setup environment for diarization and feature extraction
+
+    `conda env create -f environment_diarization.yml`
+
 
 ## Dataset
 
