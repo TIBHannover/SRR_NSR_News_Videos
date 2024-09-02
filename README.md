@@ -30,6 +30,8 @@ This is the official github page for the [paper](https://dl.acm.org/doi/10.1145/
 
     `conda env create -f environment_diarization.yml`
 
+   - Install whisperx: `pip install git+https://github.com/m-bain/whisperX.git@4cb167a225c0ebaea127fd6049abfaa3af9f8bb4`
+
 
 ## Dataset
 
