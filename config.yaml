@@ -1,0 +1,228 @@
+###### general
+fps: 2
+videos_dir: "dataset/videos"
+video_feature_dir: "dataset/features"
+situation_split_dir: "dataset/situations/splits"
+situation_feature_dir: "dataset/situations/features"
+situation_clips_dir: "dataset/situations/clips"
+speaker_split_dir: "dataset/speaker/splits"
+speaker_feature_dir: "dataset/speaker/features"
+speaker_clips_dir: "dataset/speaker/clips"
+######
+
+###### features.py
+wikifier_key: ""
+whisper_model: "large-v2"
+tmp_dir: "feature_extraction/tmp/"
+spk_diarization_script: "whisper-diarization-main/diarize.py"
+CLIP_queries: "feature_extraction/CLIP_queries.json"
+pos_dict:
+  ADJ: 0
+  ADP: 1
+  ADV: 2
+  AUX: 3
+  CONJ: 4
+  CCONJ: 4
+  SCONJ: 4
+  DET: 5
+  INTJ: 6
+  NOUN: 7
+  NUM: 8  
+  PART: 9
+  PRON: 10
+  PROPN: 11
+  VERB: 12
+  X: 13
+######
+
+source_abbreviations:
+  - com
+  - bild
+  - tag
+
+speaker_hierarchy_mapping_0:
+  anchor: anchor
+  reporter: reporter
+  doctor-nurse: other
+  expert-medicine: other
+  expert-other: other
+  layperson: other
+  layperson-4-covid: other
+  layperson-x-covid: other
+  police-frwr: other
+  politician-ampel: other
+  politician-other: other
+  politician-n-de: other
+  politician-right: other
+  celeb: other
+
+speaker_hierarchy_mapping_1:
+  anchor: anchor
+  reporter: reporter
+  doctor-nurse: expert
+  expert-medicine: expert
+  expert-other: expert
+  layperson: layperson
+  layperson-4-covid: layperson
+  layperson-x-covid: layperson
+  police-frwr: other
+  politician-ampel: politician
+  politician-other: politician
+  politician-n-de: politician
+  politician-right: politician
+  celeb: other
+
+groundtruth_numerical_speaker:
+  anchor: 0
+  reporter: 1
+  other: 2
+  expert: 3
+  layperson: 4
+  politician: 5
+
+groundtruth_numerical_situations:
+  talking-head: 0
+  voiceover: 1
+  interview: 2
+  commenting: 3
+  speech: 4
+
+window_lengths:
+  - 5
+  - 10
+  - 20
+  - 40
+
+context_size: 1
+
+seed: 100
+k: 10
+
+labels_0:
+  - anchor
+  - reporter
+  - other
+
+labels_1:
+  - anchor
+  - reporter
+  - other
+  - expert
+  - layperson
+  - politician
+
+labels_situations:
+  - talking-head
+  - voiceover
+  - interview
+  - commenting
+  - speech
+
+feature_names_speaker:
+  - clip_Anchor
+  - clip_Reporter
+  - clip_PoliceFrwr
+  - clip_DoctorNurse
+  - clip_Xcov
+  - clip_4cov
+  - clip_Layperson
+  - clip_ExpMedicine
+  - clip_ExpOth
+  - clip_Polit
+  - clip_PolitAmpel
+  - clip_PolitRight
+  - clip_PolitOther
+  - clip_Polit-n-de
+  - clip_Celeb
+  - clip_Talkinghead
+  - clip_Interview
+  - clip_Speech
+  - clip_Commenting
+  - clip_Voiceover
+  - clip_Studio
+  - clip_Indoor
+  - clip_Outdoor
+  - LengthOfSpeech
+  - Avg_Shotdensity
+  - NumberOfShots
+  - PositiveSentProb
+  - NegativeSentProb
+  - NeutralSentProb
+  - pos_ADJ 
+  - pos_ADP 
+  - pos_ADV 
+  - pos_AUX 
+  - pos_CONJ
+  - pos_DET 
+  - pos_INTJ 
+  - pos_NOUN 
+  - pos_NUM   
+  - pos_PART 
+  - pos_PRON
+  - pos_PROPN
+  - pos_VERB
+  - pos_X
+  - ner_EPER
+  - ner_LPER
+  - ner_LOC
+  - ner_ORG
+  - ner_MISC
+  - speaker_before_img_sim
+  - speaker_after_img_sim
+  - speaker_before_sent_sim
+  - speaker_after_sent_sim
+
+feature_names_situations:
+  - clip_Anchor
+  - clip_Reporter
+  - clip_PoliceFrwr
+  - clip_DoctorNurse
+  - clip_Xcov
+  - clip_4cov
+  - clip_Layperson
+  - clip_ExpMedicine
+  - clip_ExpOth
+  - clip_Polit
+  - clip_PolitAmpel
+  - clip_PolitRight
+  - clip_PolitOther
+  - clip_Polit-n-de
+  - clip_Celeb
+  - clip_Talkinghead
+  - clip_Interview
+  - clip_Speech
+  - clip_Commenting
+  - clip_Voiceover
+  - clip_Studio
+  - clip_Indoor
+  - clip_Outdoor
+  - LengthOfSpeech
+  - Avg_Shotdensity
+  - NumberOfShots
+  - PositiveSentProb
+  - NegativeSentProb
+  - NeutralSentProb
+  - pos_ADJ 
+  - pos_ADP 
+  - pos_ADV 
+  - pos_AUX 
+  - pos_CONJ
+  - pos_DET 
+  - pos_INTJ 
+  - pos_NOUN 
+  - pos_NUM   
+  - pos_PART 
+  - pos_PRON
+  - pos_PROPN
+  - pos_VERB
+  - pos_X
+  - ner_EPER
+  - ner_LPER
+  - ner_LOC
+  - ner_ORG
+  - ner_MISC
+  - speaker_before_img_sim
+  - speaker_after_img_sim
+  - speaker_before_sent_sim
+  - speaker_after_sent_sim
+######
