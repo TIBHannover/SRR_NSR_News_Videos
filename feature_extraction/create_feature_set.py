@@ -350,10 +350,10 @@ def main():
             assert len(vector) == 52 if feature_type == "segmentbased" else 136
             
             if args.task == "speaker":
-                feature_dict[source][key] = {"vector": np.array(vector), "start": speaker_start, "end": speaker_end,
+                feature_dict[source][key] = {"feature": np.array(vector), "start": speaker_start, "end": speaker_end,
                                     "label_0": data['label_0'], "label_1": data['label_1']}
             else:
-                feature_dict[source][key] = {"vector": np.array(vector), "start": speaker_start, "end": speaker_end,
+                feature_dict[source][key] = {"feature": np.array(vector), "start": speaker_start, "end": speaker_end,
                                     "label": data['label']}
         
     print("\tFeature processing done!")
