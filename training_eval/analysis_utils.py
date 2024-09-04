@@ -47,7 +47,7 @@ def plot_feature_importances(feature_importances, feature_names, model_type,
         os.makedirs(plot_dir)
     plot_path = os.path.join(plot_dir, f'feature_importances_{basename}.png')
     plt.savefig(plot_path, bbox_inches='tight')
-    print(f'Feature Importances saved as png: {plot_path}')
+    print(f'\tFeature Importances saved as png: {plot_path}')
 
     # Create a dictionary of feature names and their importances
     feature_importance_dict = {sorted_feature_names[i]: sorted_importances[i] for i in range(len(feature_names))}
@@ -56,7 +56,7 @@ def plot_feature_importances(feature_importances, feature_names, model_type,
     json_file_path = os.path.join(plot_dir, f'feature_importances_{basename}.json')
     with open(json_file_path, 'w') as json_file:
         json.dump(feature_importance_dict, json_file, indent=4)
-    print(f'Feature importances saved as JSON: {json_file_path}')
+    print(f'\tFeature importances saved as JSON: {json_file_path}')
 
 
 def plot_confusion_matrices(conf_matrices, model_type, task, aggregation, 
@@ -89,9 +89,9 @@ def plot_confusion_matrices(conf_matrices, model_type, task, aggregation,
     # Saving the confusion matrix plot
     cm_plot_path = os.path.join(plot_dir, f'confusion_matrix_{basename}.png')
     plt.savefig(cm_plot_path, bbox_inches='tight')
-    print(f'Confusion Matrix plot saved as png: {cm_plot_path}')
+    print(f'\tConfusion Matrix plot saved as png: {cm_plot_path}')
 
     # Optionally, save the average confusion matrix as a CSV or JSON
     cm_file_path = os.path.join(plot_dir, f'confusion_matrix_{basename}.csv')
     np.savetxt(cm_file_path, normalized_cm, delimiter=",")
-    print(f'Confusion Matrix data saved as csv: {cm_file_path}')
+    print(f'\tConfusion Matrix data saved as csv: {cm_file_path}')

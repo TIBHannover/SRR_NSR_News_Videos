@@ -1,0 +1,3 @@
+[submodule "TransNetV2"]
+	path = TransNetV2
+	url = git@github.com:soCzech/TransNetV2.git
