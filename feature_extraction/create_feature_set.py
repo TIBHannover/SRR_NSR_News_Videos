@@ -7,45 +7,63 @@ from collections import defaultdict
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-def load_pickle(path):
-    with open(path, 'rb') as pkl:
-        return pickle.load(pkl)
 
+## Processor Functions for each type of feature
+## Visual Processing
 def process_clip_data(clip_data, segment_start, segment_end, config):
     clip_features = []
     for domain in clip_data.keys():
-        relevant_frames = [
-            data for i, data in enumerate(clip_data[domain])
-            if segment_start <= i / config['fps'] <= segment_end
-        ]
-        
-        label_sums = defaultdict(float)
+        relevant_frames = []
+        for i, data in enumerate(clip_data[domain]):
+            frame_time = i / config['fps']
+            if segment_start <= frame_time <= segment_end:
+                relevant_frames.append(data)
+
+        label_sums = {}
         for frame in relevant_frames:
             for label, prob in frame:
-                label_sums[label] += prob
-        
-        feature_vec = [label_sums[label] / len(relevant_frames) for label in label_sums]
+                if label not in label_sums:
+                    label_sums[label] = prob
+                else:
+                    label_sums[label] += prob
+
+        feature_vec = []
+        for label in label_sums.keys():
+            avg_prob = label_sums[label] / len(relevant_frames)
+            feature_vec.append(avg_prob)
+
         clip_features.append(feature_vec)
     
     return clip_features
 
+
 def process_density_data(sd_data, segment_start, segment_end):
     density_with_time = list(zip(sd_data['time'], sd_data['y']))
-    relevant_frames = [
-        data[1] for data in density_with_time
-        if segment_start <= data[0] <= segment_end
-    ]
+    relevant_frames = []
+    for data in density_with_time:
+        if segment_start <= data[0] <= segment_end:
+            relevant_frames.append(data)
     
-    return np.mean(relevant_frames) if relevant_frames else 0
+    if len(relevant_frames) == 0:
+        return 0
+    
+    sum_density = sum(data[1] for data in relevant_frames)
+    return sum_density / len(relevant_frames)
+
 
 def process_shots_data(sbd_data, segment_start, segment_end):
-    return sum(
-        1 for shot_start, shot_end in sbd_data
-        if max(0, min(segment_end, shot_end) - max(segment_start, shot_start)) / (segment_end - segment_start) > 0
-    )
+    shot_count = 0
+    for shot in sbd_data:
+        shot_start, shot_end = shot
+        ovp = max(0, min(segment_end, shot_end) - max(segment_start, shot_start)) / (segment_end - segment_start)
+        if ovp > 0:
+            shot_count += 1
+    return shot_count
 
+
+## Textual Processing
 def process_sentiment_data(sentiment_data, segment_start, segment_end):
-    sentiments_sum = defaultdict(float)
+    sentiments_sum = {'positive': 0, 'negative': 0, 'neutral': 0}
     count = 0
     for sentence in sentiment_data:
         ovp = max(0, min(segment_end, sentence['end']) - max(segment_start, sentence['start'])) / (sentence['end'] - sentence['start'])
@@ -54,55 +72,82 @@ def process_sentiment_data(sentiment_data, segment_start, segment_end):
             for sentiment, prob in sentence['sentiment_probs']:
                 sentiments_sum[sentiment] += prob
     
-    return [sentiments_sum[sentiment] / count if count else 0 for sentiment in ['positive', 'negative', 'neutral']]
+    if count == 0:
+        return [0, 0, 0]
+    
+    return [sentiments_sum[sentiment] / count for sentiment in ['positive', 'negative', 'neutral']]
+
 
 def process_pos_data(pos_data, segment_start, segment_end):
     for pos_seg in pos_data:
         ovp = max(0, min(segment_end, pos_seg['end_time']) - max(segment_start, pos_seg['start_time'])) / (pos_seg['end_time'] - pos_seg['start_time'])
         if ovp > 0.7:
-            pos_vector = np.array(pos_seg['vector'])
-            return (pos_vector / np.sum(pos_vector)).tolist() if np.sum(pos_vector) else pos_vector.tolist()
+            pos_vector = pos_seg['vector']
+            num_tags = sum(pos_vector)
+            if num_tags == 0:
+                continue
+            return [val / num_tags for val in pos_vector]
     
-    return np.zeros(len(pos_data[0]['vector'])).tolist()
+    return [0] * len(pos_data[0]['vector'])
+
 
 def process_ner_data(ner_data, segment_start, segment_end):
     for ner_seg in ner_data:
         ovp = max(0, min(segment_end, ner_seg['end_time']) - max(segment_start, ner_seg['start_time'])) / (ner_seg['end_time'] - ner_seg['start_time'])
         if ovp > 0.7:
-            ner_vector = np.array(ner_seg['vector'])
-            ner_vector = np.delete(ner_vector, 4)  # remove events
-            return (ner_vector > 0).astype(int)
+            ner_vector = ner_seg['vector']
+            ner_vector = ner_vector[:4] + ner_vector[5:]  # remove events
+            return [1 if val > 0 else 0 for val in ner_vector]
     
-    return np.zeros(len(ner_data[0]['vector']) - 1).tolist()
+    return [0] * (len(ner_data[0]['vector']) - 1)
 
+
+## Contextual Processing
 def image_context_similarity(imgemb_data, segment_start, segment_end, sid, segments, config):
     fps = config['fps']
     context_size = config['context_size']
 
-    segment_frames = imgemb_data[round(segment_start * fps):round(segment_end * fps)]
+    segment_start_frame = round(segment_start * fps)
+    segment_end_frame = round(segment_end * fps)
+    imgembs_segment = imgemb_data[segment_start_frame:segment_end_frame]
     
-    def get_context_embeddings(offset):
-        context_embeddings = []
-        for i in range(1, context_size + 1):
-            idx = sid + i * offset
-            if 0 <= idx < len(segments):
-                start, end = segments[idx][1]['start'], segments[idx][1]['end']
-                context_embeddings.append(imgemb_data[round(start * fps):round(end * fps)])
-            else:
-                context_embeddings.append([])
-        return context_embeddings
+    imgembs_before = []
+    imgembs_after = []
+    for i in range(1, context_size + 1):
+        if sid - i >= 0:
+            start = segments[sid - i][1]['start']
+            end = segments[sid - i][1]['end']
+            start_frame = round(start * fps)
+            end_frame = round(end * fps)
+            imgembs_before.append(imgemb_data[start_frame:end_frame])
+        else:
+            imgembs_before.append([])
+        if sid + i < len(segments):
+            start = segments[sid + i][1]['start']
+            end = segments[sid + i][1]['end']
+            start_frame = round(start * fps)
+            end_frame = round(end * fps)
+            imgembs_after.append(imgemb_data[start_frame:end_frame])
+        else:
+            imgembs_after.append([])
+    
+    before_img_similarities = []
+    after_img_similarities = []
+    for imgembs_context in imgembs_before:
+        if len(imgembs_context) > 0:
+            similarities = cosine_similarity(imgembs_context, imgembs_segment)
+            before_img_similarities.append(np.quantile(similarities.flatten(), 0.8))
+        else:
+            before_img_similarities.append(0)
+    
+    for imgembs_context in imgembs_after:
+        if len(imgembs_context) > 0:
+            similarities = cosine_similarity(imgembs_context, imgembs_segment)
+            after_img_similarities.append(np.quantile(similarities.flatten(), 0.8))
+        else:
+            after_img_similarities.append(0)
 
-    before_embeddings = get_context_embeddings(-1)
-    after_embeddings = get_context_embeddings(1)
-
-    def compute_similarities(context_embeddings):
-        return [
-            np.quantile(cosine_similarity(context, segment_frames).flatten(), 0.8)
-            if len(context) > 0 else 0
-            for context in context_embeddings
-        ]
-
-    return compute_similarities(before_embeddings) + compute_similarities(after_embeddings)
+    return before_img_similarities + after_img_similarities
 
 def get_matching_textsegment(textemb_data, segment_start, segment_end):
     for text_segment in textemb_data:
@@ -119,37 +164,54 @@ def text_context_similarity(textemb_data, segment_start, segment_end, sid, segme
     if len(reference_segment) == 0:
         return [0] * (2 * context_size)
     
-    def get_context_embeddings(offset):
-        context_embeddings = []
-        for i in range(1, context_size + 1):
-            idx = sid + i * offset
-            if 0 <= idx < len(segments):
-                start, end = segments[idx][1]['start'], segments[idx][1]['end']
-                context_embeddings.append(get_matching_textsegment(textemb_data, start, end))
-            else:
-                context_embeddings.append([])
-        return context_embeddings
+    textembs_before = []
+    textembs_after = []
+    for i in range(1, context_size + 1):
+        if sid - i >= 0:
+            start = segments[sid - i][1]['start']
+            end = segments[sid - i][1]['end']
+            textembs_before.append(get_matching_textsegment(textemb_data, start, end))
+        else:
+            textembs_before.append([])
+        if sid + i < len(segments):
+            start = segments[sid + i][1]['start']
+            end = segments[sid + i][1]['end']
+            textembs_after.append(get_matching_textsegment(textemb_data, start, end))
+        else:
+            textembs_after.append([])
 
-    before_embeddings = get_context_embeddings(-1)
-    after_embeddings = get_context_embeddings(1)
+    before_text_similarities = []
+    after_text_similarities = []
+    for textembs_context in textembs_before:
+        if len(textembs_context) > 0:
+            similarities = cosine_similarity(reference_segment, textembs_context)
+            before_text_similarities.append(np.max(similarities.flatten()))
+        else:
+            before_text_similarities.append(0)
+    for textembs_context in textembs_after:
+        if len(textembs_context) > 0:
+            similarities = cosine_similarity(reference_segment, textembs_context)
+            after_text_similarities.append(np.max(similarities.flatten()))
+        else:
+            after_text_similarities.append(0)
 
-    def compute_similarities(context_embeddings):
-        return [
-            np.max(cosine_similarity(reference_segment, context).flatten())
-            if len(context) > 0 else 0
-            for context in context_embeddings
-        ]
+    return before_text_similarities + after_text_similarities
 
-    return compute_similarities(before_embeddings) + compute_similarities(after_embeddings)
 
-def segment_based_aggregation(speaker_start, speaker_end, clip_data, sbd_data,
-                              sd_data, imgemb_data, sentiment_data, pos_data,
+def load_pickle(path):
+    with open(path, 'rb') as pkl:
+        data = pickle.load(pkl)
+    return data
+
+
+def segment_based_aggregation(speaker_start, speaker_end, clip_data, sbd_data, 
+                              sd_data, imgemb_data, sentiment_data, pos_data, 
                               ner_data, textemb_data, sid, segments, config):
     vector = []
-
+    
     clip_features = process_clip_data(clip_data, speaker_start, speaker_end, config)
-    for feature_list in clip_features:
-        vector.extend(feature_list)
+    for clip_feature_vec in clip_features:
+        vector.extend(clip_feature_vec)
 
     vector.append(speaker_end - speaker_start)
     vector.append(process_density_data(sd_data, speaker_start, speaker_end))
@@ -168,35 +230,44 @@ def window_based_aggregation(speaker_start, speaker_end, clip_data, sbd_data,
                             ner_data, textemb_data, sid, segments, config):
     segment_features = []
 
-    # Calculate FPS-adjusted start and end times once
     speaker_start_fps = round(speaker_start * config['fps']) / config['fps']
     speaker_end_fps = round(speaker_end * config['fps']) / config['fps']
-    
+
     for window_length in config['window_lengths']:
-        
+        windows = []
+        window_start = speaker_start_fps
+        while window_start < speaker_end_fps:
+            window_end = window_start + window_length
+            if window_end > speaker_end_fps:
+                window_end = speaker_end_fps
+            windows.append((window_start, window_end))
+            window_start += window_length 
 
-        windows = [
-            (start, min(start + window_length, speaker_end_fps))
-            for start in np.arange(speaker_start_fps, speaker_end_fps, window_length)
-        ]
-
-        window_features = [
-            {
-                'clip': process_clip_data(clip_data, start, end, config),
-                'shot_density': process_density_data(sd_data, start, end),
-                'sentiments': process_sentiment_data(sentiment_data, start, end),
-                'shots': process_shots_data(sbd_data, start, end)
-            }
-            for start, end in windows
-        ]
+        window_features = []
+        for window in windows:
+            window_start, window_end = window
+            feature_dict = {}
+            feature_dict['clip'] = process_clip_data(clip_data, window_start, window_end, config)
+            feature_dict['shot_density'] = process_density_data(sd_data, window_start, window_end)
+            feature_dict['sentiments'] = process_sentiment_data(sentiment_data, window_start, window_end)
+            feature_dict['shots'] = process_shots_data(sbd_data, window_start, window_end)
+            window_features.append(feature_dict)
 
         clip_features = [f['clip'] for f in window_features]
-        for domain_features in zip(*clip_features):
-            segment_features.extend(np.mean(domain_features, axis=0))
+        shotdensities = [f['shot_density'] for f in window_features]
+        sentiments = [f['sentiments'] for f in window_features]
+        shot_counts = [f['shots'] for f in window_features]
+
+        num_clip_domains = len(clip_features[0])
+        num_windows = len(windows)
+        for i in range(num_clip_domains):
+            domain_vectors = [clip_features[j][i] for j in range(num_windows)]
+            avgs = np.mean(domain_vectors, axis=0)
+            segment_features.extend(avgs.tolist())
         
-        segment_features.append(np.mean([f['shot_density'] for f in window_features]))
-        segment_features.extend(np.quantile([f['sentiments'] for f in window_features], 0.8, axis=0))
-        segment_features.append(np.mean([f['shots'] for f in window_features]))
+        segment_features.append(np.mean(shotdensities))
+        segment_features.extend(np.quantile(list(zip(*sentiments)), 0.8, axis=1))
+        segment_features.append(np.mean(shot_counts))
 
     segment_features.append(speaker_end - speaker_start)
     segment_features.extend(process_pos_data(pos_data, speaker_start, speaker_end))
@@ -213,73 +284,85 @@ def main():
     parser.add_argument('--feature_type', type=str, default='segmentbased', choices=['segmentbased', 'windowbased'], help='Feature type to use for speaker embeddings')
     args = parser.parse_args()
 
-    with open(args.config, 'r') as file:
+    with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
 
+    feature_type = args.feature_type
     feature_dir = config["speaker_feature_dir"] if args.task == "speaker" else config["situation_feature_dir"]
-    clip_path = config["speaker_clips_dir"] if args.task == "speaker" else config["situation_clips_dir"]
-    
-    clip_metadata = pd.read_csv(os.path.join(clip_path, "clip_list.txt"))
 
+    # clips metadata
+    clip_path = config["speaker_clips_dir"] if args.task == "speaker" else config["situation_clips_dir"]
+    clip_metadata = pd.read_csv(clip_path+"/clip_list.txt")
+
+    # video segments map
     video_segments_map = defaultdict(list)
-    for _, row in clip_metadata.iterrows():
-        base_video_name = row['clip_name'].rsplit('_', 1)[0]
-        dt = {"start": row['start_time'], "end": row['end_time']}
+    for cl in clip_metadata.iterrows():
+        base_video_name = cl[1]['clip_name'].rsplit('_', 1)[0]
         if args.task == "speaker":
-            dt.update({"label_0": row['label_0'], "label_1": row['label_1']})
+            dt = {"start": cl[1]['start_time'], "end": cl[1]['end_time'], "label_0": cl[1]['label_0'], "label_1": cl[1]['label_1']}
         else:
-            dt.update({"label": row['label']})
-        video_segments_map[base_video_name].append((row['clip_name'], dt))
+            dt = {"start": cl[1]['start_time'], "end": cl[1]['end_time'], "label": cl[1]['label']}
+        video_segments_map[base_video_name].append((cl[1]['clip_name'], dt))
 
     print(f"Total unique videos: {len(video_segments_map)}")
-    print(f"Total number of samples: {sum(len(segments) for segments in video_segments_map.values())}\n")
+    print(f"Total number of samples: {sum([len(video_segments_map[video]) for video in video_segments_map.keys()])}\n")
 
-    feature_dict = {source: {} for source in ["com", "tag", "bild"]}
-    for video_name, segments in video_segments_map.items():
+    # Assign the appropriate aggregation function based on feature_type
+    aggregation_func = segment_based_aggregation if feature_type == "segmentbased" else window_based_aggregation
+
+    # Feature Processing
+    feature_dict = {"com": {}, "tag": {}, "bild": {}}  # Source wise feature dictionary
+    for video_name in video_segments_map.keys():
         print(f"Processing video: {video_name}")
 
-        source = "tag" if video_name.startswith("TV") else "com" if "com" in video_name.lower() else "bild"
+        if "TV" == video_name[:2]:
+            source = "tag"
+        elif "com" in video_name.lower():
+            source = "com"
+        else:
+            source = "bild"
 
-        feature_files = {
-            'clip_data': "clip_qas.pkl",
-            'sbd_data': "shot_boundary_detection.pkl",
-            'sd_data': "shot_density.pkl",
-            'imgemb_data': "image_embedding.pkl",
-            'sentiment_data': "sentiment.pkl",
-            'pos_data': "pos_tags.pkl",
-            'ner_data': "ner_tags.pkl",
-            'textemb_data': "sentence_embedding.pkl"
-        }
+        # Audio Features
+        diarization_data = load_pickle(os.path.join("dataset/features", video_name, "speaker_diarization.pkl"))
+        # Visual Features
+        clip_data = load_pickle(os.path.join("dataset/features", video_name, "clip_qas.pkl"))
+        sbd_data = load_pickle(os.path.join("dataset/features", video_name, "shot_boundary_detection.pkl"))
+        sd_data = load_pickle(os.path.join("dataset/features", video_name, "shot_density.pkl"))
+        imgemb_data = load_pickle(os.path.join("dataset/features", video_name, "image_embedding.pkl"))
+        # Textual Features
+        sentiment_data = load_pickle(os.path.join("dataset/features", video_name, "sentiment.pkl"))
+        pos_data = load_pickle(os.path.join("dataset/features", video_name, "pos_tags.pkl"))
+        ner_data = load_pickle(os.path.join("dataset/features", video_name, "ner_tags.pkl"))
+        textemb_data = load_pickle(os.path.join("dataset/features", video_name, "sentence_embedding.pkl"))
 
-        feature_data = {
-            key: load_pickle(os.path.join("dataset/features", video_name, filename))
-            for key, filename in feature_files.items()
-        }
-
-        aggregation_func = segment_based_aggregation if args.feature_type == "segmentbased" else window_based_aggregation
-        
-        for sid, (key, data) in enumerate(segments):
-            speaker_start, speaker_end = data['start'], data['end']
-            vector = aggregation_func(speaker_start, speaker_end, sid=sid, segments=segments, config=config, **feature_data)
-            print(len(vector))
-            feature_entry = {"vector": np.array(vector), "start": speaker_start, "end": speaker_end}
-            if args.task == "speaker":
-                feature_entry.update({"label_0": data['label_0'], "label_1": data['label_1']})
-            else:
-                feature_entry.update({"label": data['label']})
+        segments = video_segments_map[video_name]
+        for sid, segment in enumerate(segments):
+            key, data = segment
             
-            feature_dict[source][key] = feature_entry
+            speaker_start, speaker_end = data['start'], data['end']
 
+            vector = aggregation_func(speaker_start, speaker_end, clip_data, sbd_data, 
+                                      sd_data, imgemb_data, sentiment_data, pos_data, 
+                                      ner_data, textemb_data, sid, segments, config)
+            
+            assert len(vector) == 52 if feature_type == "segmentbased" else 136
+            
+            if args.task == "speaker":
+                feature_dict[source][key] = {"vector": np.array(vector), "start": speaker_start, "end": speaker_end,
+                                    "label_0": data['label_0'], "label_1": data['label_1']}
+            else:
+                feature_dict[source][key] = {"vector": np.array(vector), "start": speaker_start, "end": speaker_end,
+                                    "label": data['label']}
+        
     print("\tFeature processing done!")
-    for source in feature_dict:
-        print(f"\tNumber of samples: {source.capitalize()}: {len(feature_dict[source])}")
-    print(f"\tTotal number of samples: {sum(len(samples) for samples in feature_dict.values())}")
+    print(f"\tNumber of samples: CompactTV: {len(feature_dict['com'])}, Tagesschau: {len(feature_dict['tag'])}, BildTV: {len(feature_dict['bild'])}")
+    print(f"\tTotal number of samples: {len(feature_dict['com']) + len(feature_dict['tag']) + len(feature_dict['bild'])}")
 
-    for source, features in feature_dict.items():
-        feature_file = f"{feature_dir}/{source}_features_{args.feature_type}.pkl"
+    # Save the feature dictionary
+    for source in feature_dict.keys():
+        feature_file = f"{feature_dir}/{source}_features_{feature_type}.pkl"
         with open(feature_file, 'wb') as pkl:
-            pickle.dump(features, pkl)
-        print(f"Saved features for {source} to {feature_file}")
+            pickle.dump(feature_dict[source], pkl)
 
 if __name__ == "__main__":
     main()
