@@ -96,8 +96,10 @@ def process_ner_data(ner_data, segment_start, segment_end):
         ovp = max(0, min(segment_end, ner_seg['end_time']) - max(segment_start, ner_seg['start_time'])) / (ner_seg['end_time'] - ner_seg['start_time'])
         if ovp > 0.7:
             ner_vector = ner_seg['vector']
-            ner_vector = ner_vector[:4] + ner_vector[5:]  # remove events
-            return [1 if val > 0 else 0 for val in ner_vector]
+            # remove events, since no events are in the dataset
+            ner_vector = np.delete(ner_vector, 4)
+            ner_vector[ner_vector > 0] = 1
+            return ner_vector
     
     return [0] * (len(ner_data[0]['vector']) - 1)
 
@@ -358,11 +360,11 @@ def main():
     print(f"\tNumber of samples: CompactTV: {len(feature_dict['com'])}, Tagesschau: {len(feature_dict['tag'])}, BildTV: {len(feature_dict['bild'])}")
     print(f"\tTotal number of samples: {len(feature_dict['com']) + len(feature_dict['tag']) + len(feature_dict['bild'])}")
 
-    # Save the feature dictionary
-    for source in feature_dict.keys():
-        feature_file = f"{feature_dir}/{source}_features_{feature_type}.pkl"
-        with open(feature_file, 'wb') as pkl:
-            pickle.dump(feature_dict[source], pkl)
+    # # Save the feature dictionary
+    # for source in feature_dict.keys():
+    #     feature_file = f"{feature_dir}/{source}_features_{feature_type}.pkl"
+    #     with open(feature_file, 'wb') as pkl:
+    #         pickle.dump(feature_dict[source], pkl)
 
 if __name__ == "__main__":
     main()
