@@ -168,9 +168,12 @@ def window_based_aggregation(speaker_start, speaker_end, clip_data, sbd_data,
                             ner_data, textemb_data, sid, segments, config):
     segment_features = []
 
+    # Calculate FPS-adjusted start and end times once
+    speaker_start_fps = round(speaker_start * config['fps']) / config['fps']
+    speaker_end_fps = round(speaker_end * config['fps']) / config['fps']
+    
     for window_length in config['window_lengths']:
-        speaker_start_fps = round(speaker_start * config['fps']) / config['fps']
-        speaker_end_fps = round(speaker_end * config['fps']) / config['fps']
+        
 
         windows = [
             (start, min(start + window_length, speaker_end_fps))
@@ -258,7 +261,7 @@ def main():
         for sid, (key, data) in enumerate(segments):
             speaker_start, speaker_end = data['start'], data['end']
             vector = aggregation_func(speaker_start, speaker_end, sid=sid, segments=segments, config=config, **feature_data)
-
+            print(len(vector))
             feature_entry = {"vector": np.array(vector), "start": speaker_start, "end": speaker_end}
             if args.task == "speaker":
                 feature_entry.update({"label_0": data['label_0'], "label_1": data['label_1']})
