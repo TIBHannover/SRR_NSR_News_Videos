@@ -67,7 +67,3 @@ This is the official github page for the [paper](https://dl.acm.org/doi/10.1145/
       }
       ```
 
-
-
-## To-Dos
-- [ ] Comparison methods code
