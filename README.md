@@ -67,3 +67,27 @@ This is the official github page for the [paper](https://dl.acm.org/doi/10.1145/
       }
       ```
 
+## Feature Extraction
+- Features used in the paper are already extracted in `/dataset/{task}/features`
+- Otherwise, features for the dataset can be extracted from scripts in `feature_extraction/`
+- **Audio Features:**
+  - ASR: `conda activate fn1_main & python feature_extraction/audio_features.py --feature asr`
+  - Diarization: `conda activate fn1_diar & python feature_extraction/audio_features.py --feature asr`
+- **Text Features**
+  - `conda activate fn1_main & python feature_extraction/text_features.py --features sentiment pos ner embeddings`
+- **Visual Features**
+  - Shot Features: `conda activate fn1_main & python feature_extraction/visual_features.py --feature shot-bd`
+  - CLIP Features: `conda activate fn1_main & python feature_extraction/visual_features.py --feature clip`
+- **Create Aggregated Feature set**  
+  - `conda activate fn1_main & python feature_extraction/create_feature_set.py --task speaker --feature_type segmentbased`
+  - Choose task and feature type options as required.
+
+
+## Training & Evaluation
+- K-Fold: `python training_eval/classifiers_kfold.py --rf --srr --seg --hierarchy 0`
+  - Trains a random forest model for speaker role recognition (level-1) over segment-based features in a K-Fold setting
+  - Outputs the metric scores for K test splits
+- Cross-domain: `python training_eval/classifiers_cross.py --rf --srr --seg --hierarchy 0 --test tag`
+  - Trains a random forest model for speaker role recognition (level-1) over segment-based features, with training data from BildTV + CompactTV and test data from Tagesschau
+  - Outputs metric score for only one test split, in this case, Tagesschau
+
